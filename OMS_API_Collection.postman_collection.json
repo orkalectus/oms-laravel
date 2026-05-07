@@ -13,7 +13,7 @@
   ],
   "item": [
     {
-      "name": "🏥 Health Check",
+      "name": " Health Check",
       "request": {
         "method": "GET",
         "header": [],
@@ -21,7 +21,7 @@
       }
     },
     {
-      "name": "🔐 Auth",
+      "name": " Auth",
       "item": [
         {
           "name": "Register",
@@ -83,7 +83,7 @@
       ]
     },
     {
-      "name": "🛍️ Products",
+      "name": " Products",
       "item": [
         {
           "name": "List Products (FakeStore)",
@@ -136,7 +136,7 @@
       ]
     },
     {
-      "name": "🚚 Shipping",
+      "name": " Shipping",
       "item": [
         {
           "name": "Get Provinces",
@@ -185,7 +185,7 @@
       ]
     },
     {
-      "name": "📦 Orders",
+      "name": " Orders",
       "item": [
         {
           "name": "List My Orders",
@@ -281,7 +281,7 @@
       ]
     },
     {
-      "name": "💳 Payments",
+      "name": " Payments",
       "item": [
         {
           "name": "Initiate Payment (Bank Transfer)",
@@ -369,7 +369,7 @@
       ]
     },
     {
-      "name": "🧪 Simulation (Debug Only)",
+      "name": " Simulation (Debug Only)",
       "item": [
         {
           "name": "Simulate Payment SUCCESS",
@@ -397,7 +397,7 @@
       ]
     },
     {
-      "name": "👑 Admin",
+      "name": " Admin",
       "item": [
         {
           "name": "Update Order Status (Admin)",
