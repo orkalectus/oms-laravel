@@ -1,0 +1,443 @@
+{
+  "info": {
+    "name": "OMS - Order Management System API",
+    "_postman_id": "oms-laravel-v1",
+    "description": "Complete API collection for Order Management System built with Laravel.\n\n**Base URL:** `http://localhost:8000/api/v1`\n\n**Auth:** Bearer Token (from login response)\n\n**Flow:**\n1. Register / Login → get token\n2. Browse Products\n3. Calculate Shipping\n4. Create Order (with idempotency_key)\n5. Initiate Payment\n6. Simulate Payment Success/Failure\n7. Track Shipping",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api/v1", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "order_id", "value": "", "type": "string" },
+    { "key": "idempotency_key", "value": "{{$guid}}", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { pm.collectionVariables.set('token', pm.response.json().data.token); }"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"phone\": \"081234567890\",\n  \"address\": \"Jl. Test No. 1\",\n  \"city\": \"Bandung\",\n  \"province\": \"Jawa Barat\",\n  \"postal_code\": \"40111\",\n  \"city_id\": 151\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { pm.collectionVariables.set('token', pm.response.json().data.token); pm.test('Login successful', () => pm.response.to.have.status(200)); }"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@oms.com\",\n  \"password\": \"password\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/auth/profile", "host": ["{{base_url}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso Updated\",\n  \"phone\": \"081234567891\",\n  \"address\": \"Jl. Merdeka No. 17\",\n  \"city\": \"Bandung\",\n  \"city_id\": 151\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/profile", "host": ["{{base_url}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛍️ Products",
+      "item": [
+        {
+          "name": "List Products (FakeStore)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products?limit=10&page=1",
+              "host": ["{{base_url}}"], "path": ["products"],
+              "query": [{ "key": "limit", "value": "10" }, { "key": "page", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "Get Product Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products/fakestore_1", "host": ["{{base_url}}"], "path": ["products", "fakestore_1"] }
+          }
+        },
+        {
+          "name": "Get Product (DummyJSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products/dummyjson_1", "host": ["{{base_url}}"], "path": ["products", "dummyjson_1"] }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/search?q=laptop&limit=5",
+              "host": ["{{base_url}}"], "path": ["products", "search"],
+              "query": [{ "key": "q", "value": "laptop" }, { "key": "limit", "value": "5" }]
+            }
+          }
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products/categories", "host": ["{{base_url}}"], "path": ["products", "categories"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚚 Shipping",
+      "item": [
+        {
+          "name": "Get Provinces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/shipping/provinces", "host": ["{{base_url}}"], "path": ["shipping", "provinces"] }
+          }
+        },
+        {
+          "name": "Get Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/shipping/cities?province_id=9",
+              "host": ["{{base_url}}"], "path": ["shipping", "cities"],
+              "query": [{ "key": "province_id", "value": "9" }]
+            }
+          }
+        },
+        {
+          "name": "Calculate Shipping (JNE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin_city_id\": 23,\n  \"destination_city_id\": 151,\n  \"weight\": 1000,\n  \"courier\": \"jne\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/shipping/calculate", "host": ["{{base_url}}"], "path": ["shipping", "calculate"] }
+          }
+        },
+        {
+          "name": "Calculate Shipping (All Couriers)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin_city_id\": 23,\n  \"destination_city_id\": 399,\n  \"weight\": 2500,\n  \"courier\": \"all\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/shipping/calculate", "host": ["{{base_url}}"], "path": ["shipping", "calculate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Orders",
+      "item": [
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/orders?per_page=10",
+              "host": ["{{base_url}}"], "path": ["orders"],
+              "query": [{ "key": "per_page", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Create Order (Simple)",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201 || pm.response.code === 200) { pm.collectionVariables.set('order_id', pm.response.json().data.id); }"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"{{$guid}}\",\n  \"items\": [\n    { \"product_id\": \"fakestore_1\", \"quantity\": 2 },\n    { \"product_id\": \"fakestore_3\", \"quantity\": 1 }\n  ],\n  \"notes\": \"Please pack carefully\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "Create Order (With Shipping)",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201 || pm.response.code === 200) { pm.collectionVariables.set('order_id', pm.response.json().data.id); }"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"{{$guid}}\",\n  \"items\": [\n    { \"product_id\": \"fakestore_1\", \"quantity\": 1 }\n  ],\n  \"shipping\": {\n    \"destination_city_id\": 151,\n    \"courier\": \"jne\",\n    \"service\": \"REG\",\n    \"recipient_name\": \"Budi Santoso\",\n    \"recipient_phone\": \"081234567890\",\n    \"recipient_address\": \"Jl. Sudirman No. 10\",\n    \"recipient_city\": \"Bandung\",\n    \"recipient_province\": \"Jawa Barat\",\n    \"recipient_postal_code\": \"40111\"\n  },\n  \"notes\": \"Fragile item\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "Create Order (Idempotency Test - Duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"FIXED-KEY-FOR-IDEMPOTENCY-TEST\",\n  \"items\": [\n    { \"product_id\": \"fakestore_2\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Changed my mind\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/cancel", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "cancel"] }
+          }
+        },
+        {
+          "name": "Get Status History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/status-history", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "status-history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Payments",
+      "item": [
+        {
+          "name": "Initiate Payment (Bank Transfer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"bank_transfer\",\n  \"bank\": \"bca\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/payment/initiate", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "payment", "initiate"] }
+          }
+        },
+        {
+          "name": "Initiate Payment (QRIS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"qris\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/payment/initiate", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "payment", "initiate"] }
+          }
+        },
+        {
+          "name": "Initiate Payment (E-Wallet GoPay)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"e_wallet\",\n  \"e_wallet_type\": \"gopay\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/payment/initiate", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "payment", "initiate"] }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/payment/status", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "payment", "status"] }
+          }
+        },
+        {
+          "name": "Payment Webhook (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Payment-Signature", "value": "simulated-signature" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"TXN-ABCDEF123456\",\n  \"transaction_status\": \"settlement\",\n  \"payment_type\": \"bank_transfer\",\n  \"settlement_time\": \"2024-01-15 10:30:00\",\n  \"gross_amount\": \"250000.00\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/webhooks/payment", "host": ["{{base_url}}"], "path": ["webhooks", "payment"] }
+          }
+        },
+        {
+          "name": "Payment Webhook (Failed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Payment-Signature", "value": "simulated-signature" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"TXN-ABCDEF123456\",\n  \"transaction_status\": \"deny\",\n  \"status_message\": \"Payment declined by issuer\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/webhooks/payment", "host": ["{{base_url}}"], "path": ["webhooks", "payment"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Simulation (Debug Only)",
+      "item": [
+        {
+          "name": "Simulate Payment SUCCESS",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/simulate/orders/{{order_id}}/payment/success", "host": ["{{base_url}}"], "path": ["simulate", "orders", "{{order_id}}", "payment", "success"] }
+          }
+        },
+        {
+          "name": "Simulate Payment FAILURE",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Insufficient funds\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/simulate/orders/{{order_id}}/payment/failure", "host": ["{{base_url}}"], "path": ["simulate", "orders", "{{order_id}}", "payment", "failure"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Admin",
+      "item": [
+        {
+          "name": "Update Order Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"notes\": \"Order is being prepared\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["admin", "orders", "{{order_id}}", "status"] }
+          }
+        },
+        {
+          "name": "Ship Order (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tracking_number\": \"JNE-ABCD12345678\",\n  \"notes\": \"Picked up by courier\",\n  \"location\": \"Jakarta Warehouse\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/orders/{{order_id}}/ship", "host": ["{{base_url}}"], "path": ["admin", "orders", "{{order_id}}", "ship"] }
+          }
+        },
+        {
+          "name": "Track Shipping",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/tracking", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "tracking"] }
+          }
+        }
+      ]
+    }
+  ]
+}
